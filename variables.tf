@@ -8,6 +8,11 @@ variable "dc-password" {
   default = "4nGY-p1zzA!"
 }
 
+variable "user-password" {
+  type    = string
+  default = "Cew1-m31on#"
+}
+
 variable "safemode_password" {
   type        = string
   description = "The password for the Safe mode Administrator account"

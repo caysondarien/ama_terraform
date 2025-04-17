@@ -20,8 +20,8 @@ resource "azurerm_subnet" "deploy" {
 }
 
 # Create public IPs
-resource "azurerm_public_ip" "deploy" {
-  name                = "ama-public-ip"
+resource "azurerm_public_ip" "server" {
+  name                = "ama-public-ip-01"
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
   allocation_method   = "Dynamic"
@@ -47,47 +47,47 @@ resource "azurerm_network_security_group" "deploy" {
 }
 
 # Create network interface
-resource "azurerm_network_interface" "deploy" {
-  name                = "ama-nic"
+resource "azurerm_network_interface" "server" {
+  name                = "ama-nic-01"
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
 
   ip_configuration {
-    name                          = "my_nic_configuration"
+    name                          = "my_nic_configuration_01"
     subnet_id                     = azurerm_subnet.deploy.id
     private_ip_address_allocation = "Static"
     private_ip_address            = var.private_ip_addr
-    public_ip_address_id          = azurerm_public_ip.deploy.id
+    public_ip_address_id          = azurerm_public_ip.server.id
   }
 }
 
 # Connect the security group to the network interface
 resource "azurerm_network_interface_security_group_association" "example" {
-  network_interface_id      = azurerm_network_interface.deploy.id
+  network_interface_id      = azurerm_network_interface.server.id
   network_security_group_id = azurerm_network_security_group.deploy.id
 }
 
 # Create storage account for boot diagnostics
-resource "azurerm_storage_account" "deploy" {
-  name                     = "amastorage"
+resource "azurerm_storage_account" "server" {
+  name                     = "amastorage01"
   location                 = azurerm_resource_group.rg.location
   resource_group_name      = azurerm_resource_group.rg.name
   account_tier             = "Standard"
   account_replication_type = "LRS"
 }
 
-# Create storage account for boot diagnostics
-resource "azurerm_windows_virtual_machine" "dc" {
+# Create virtual machine
+resource "azurerm_windows_virtual_machine" "server" {
   name                  = "ama-dc-ca"
   admin_username        = "ama-admin"
   admin_password        = var.dc-password
   location              = azurerm_resource_group.rg.location
   resource_group_name   = azurerm_resource_group.rg.name
-  network_interface_ids = [azurerm_network_interface.deploy.id]
+  network_interface_ids = [azurerm_network_interface.server.id]
   size                  = "Standard_DS1_v2"
 
   os_disk {
-    name                 = "myOsDisk"
+    name                 = "ama-dc-ca-os-disk"
     caching              = "ReadWrite"
     storage_account_type = "Premium_LRS"
   }
@@ -100,7 +100,7 @@ resource "azurerm_windows_virtual_machine" "dc" {
   }
 
   boot_diagnostics {
-    storage_account_uri = azurerm_storage_account.deploy.primary_blob_endpoint
+    storage_account_uri = azurerm_storage_account.server.primary_blob_endpoint
   }
 }
 
@@ -137,5 +137,63 @@ resource "azurerm_windows_virtual_machine" "dc" {
 
 #   powershell = "${local.cmd1} ; ${local.cmd2} ; ${local.cmd3} ; ${local.cmd4} ; ${local.shut_down} ; ${local.exit_code}"
 # }
-
 # ----------------------------------------------------------------------------------------
+
+# Create public IPs
+resource "azurerm_public_ip" "client" {
+  name                = "ama-public-ip-02"
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+  allocation_method   = "Dynamic"
+}
+
+# Create network interface
+resource "azurerm_network_interface" "client" {
+  name                = "ama-nic-02"
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+
+  ip_configuration {
+    name                          = "my_nic_configuration_02"
+    subnet_id                     = azurerm_subnet.deploy.id
+    private_ip_address_allocation = "Dynamic"
+    public_ip_address_id          = azurerm_public_ip.client.id
+  }
+}
+
+# Create storage account for boot diagnostics
+resource "azurerm_storage_account" "client" {
+  name                     = "amastorage02"
+  location                 = azurerm_resource_group.rg.location
+  resource_group_name      = azurerm_resource_group.rg.name
+  account_tier             = "Standard"
+  account_replication_type = "LRS"
+}
+
+# Create virtual machine
+resource "azurerm_windows_virtual_machine" "client" {
+  name                  = "ama-win11"
+  admin_username        = "ama-user"
+  admin_password        = var.user-password
+  location              = azurerm_resource_group.rg.location
+  resource_group_name   = azurerm_resource_group.rg.name
+  network_interface_ids = [azurerm_network_interface.client.id]
+  size                  = "Standard_DS1_v2"
+
+  os_disk {
+    name                 = "ama-win11-os-disk"
+    caching              = "ReadWrite"
+    storage_account_type = "Premium_LRS"
+  }
+
+  source_image_reference {
+    publisher = "MicrosoftWindowsDesktop"
+    offer     = "windows-11"
+    sku       = "win11-24h2-ent"
+    version   = "latest"
+  }
+
+  boot_diagnostics {
+    storage_account_uri = azurerm_storage_account.client.primary_blob_endpoint
+  }
+}
