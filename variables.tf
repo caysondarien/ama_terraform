@@ -3,14 +3,8 @@ variable "resource_group_location" {
   description = "Location of the resource group"
 }
 
-variable "prefix" {
-  type        = string
-  default     = "win-vm-iis"
-  description = "Prefix of the resource name"
-}
-
 variable "dc-password" {
-  type = string
+  type    = string
   default = "4nGY-p1zzA!"
 }
 
@@ -36,7 +30,7 @@ variable "crypto_provider" {
 }
 
 variable "private_ip_addr" {
-  type = string
-  default = "10.23.0.100"
+  type        = string
+  default     = "10.23.0.100"
   description = "Private IP Address for DC01"
 }
